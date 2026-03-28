@@ -3,12 +3,23 @@ import re
 try:
     from mistralai import Mistral
 except ImportError:
-    from mistralai.client import Mistral
-from dotenv import load_dotenv
+    try:
+        from mistralai.client import Mistral
+    except ImportError:
+        Mistral = None
+
+try:
+    from dotenv import load_dotenv
+except ImportError:
+    def load_dotenv():
+        return False
 
 load_dotenv()
 
 def _build_client():
+    if Mistral is None:
+        return None
+
     api_key = os.getenv("MISTRAL_API_KEY")
     if not api_key:
         return None
