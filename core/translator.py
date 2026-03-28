@@ -1,5 +1,4 @@
 from pathlib import Path
-from transformers import pipeline
 
 _translator = None
 
@@ -13,6 +12,11 @@ def _get_translator():
     model_dir = Path(__file__).resolve().parent.parent / "model"
 
     if not model_dir.exists():
+        return None
+
+    try:
+        from transformers import pipeline
+    except Exception:
         return None
 
     # Crée le pipeline de traduction

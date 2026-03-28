@@ -3,12 +3,14 @@ FROM python:3.11-slim
 # Définir le dossier de travail
 WORKDIR /app
 
-#Copier tous les fichiers du projet
-COPY . .
+# Installer les dépendances d'abord (cache Docker)
+COPY requirements.txt ./requirements.txt
+RUN pip install --no-cache-dir --upgrade pip && pip install --no-cache-dir -r requirements.txt
 
-#Installer les dépendances
-RUN pip install --upgrade pip
-RUN pip install -r requirements.txt
+# Copier uniquement le code utile au runtime
+COPY api ./api
+COPY core ./core
+COPY memory ./memory
 
 EXPOSE 8000
 
