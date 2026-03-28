@@ -1,8 +1,9 @@
 import redis
 import json
+import os
 
 ### Connexion à redis
-r = redis.Redis(host="localhost" , port=6379 , decode_responses=True)
+r = redis.Redis(os.getenv("REDIS_URL"), decode_responses=True)
 
 def add_message(user_id , role , text):
     key = f"chat:{user_id}"
