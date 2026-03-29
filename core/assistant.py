@@ -1,17 +1,3 @@
-from core.level_api import send_level_result
-def process_level_end(user_id, score, time_seconds, level_num):
-    """Appelle le backend pour ajouter XP, score et pièces à la fin d'un niveau."""
-    result = send_level_result(user_id, score, time_seconds, level_num)
-    if "error" in result:
-        return f"Erreur lors de l'enregistrement du score: {result['error']}"
-    msg = result.get("message", "")
-    xp = result.get("xp", 0)
-    coins = result.get("coins", 0)
-    leveled_up = result.get("leveledUp", False)
-    rep = f"{msg}\nTu gagnes {xp} XP et {coins} pièces."
-    if leveled_up:
-        rep += "\nBravo, tu passes au niveau supérieur !"
-    return rep
 from memory.redis_memory import add_message, get_history
 from core.mistral_chat import chat
 from core.translator import translate
