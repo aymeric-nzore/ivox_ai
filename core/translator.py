@@ -1,50 +1,47 @@
-from pathlib import Path
 
-_translator = None
+from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
+import os
+from dotenv import load_dotenv
 
-def _get_translator():
-    """Charge le modèle FR→Dioula si ce n'est pas déjà fait."""
-    global _translator
-    if _translator is not None:
-        return _translator
+load_dotenv()
 
-    # Chemin vers le dossier model/
-    model_dir = Path(__file__).resolve().parent.parent / "model"
+_model = None
+_tokenizer = None
 
-    if not model_dir.exists():
-        return None
+HF_MODEL = "aymericnzo/ivox_fr-dioula"
+HF_TOKEN = os.getenv("HF_TOKEN")  # doit être défini dans l'environnement
 
-    try:
-        from transformers import pipeline
-    except Exception:
-        return None
+if not HF_TOKEN:
+    raise EnvironmentError("La variable d'environnement HF_TOKEN n'est pas définie. Ajoutez-la avant de lancer le script.")
 
-    # Crée le pipeline de traduction
-    _translator = pipeline(
-        task="translation",
-        model=str(model_dir),
-        tokenizer=str(model_dir),
-    )
-    return _translator
+def load_model():
+    """Charge le modèle FR→Dioula depuis Hugging Face si ce n'est pas déjà fait."""
+    global _model, _tokenizer
+
+    if _model is not None:
+        return _model, _tokenizer
+
+    # Charger depuis Hugging Face avec token moderne
+    _tokenizer = AutoTokenizer.from_pretrained(HF_MODEL, token=HF_TOKEN)
+    _model = AutoModelForSeq2SeqLM.from_pretrained(HF_MODEL, token=HF_TOKEN)
+
+    return _model, _tokenizer
 
 def translate(text: str) -> str:
-    """
-    Traduit une phrase du français vers le dioula.
-    
-    Args:
-        text (str): texte en français
+    """Traduit une phrase du français vers le dioula."""
+    model, tokenizer = load_model()
 
-    Returns:
-        str: texte traduit en dioula
-    """
-    translator = _get_translator()
-    # Si le modèle est introuvable, retourne le texte original
-    if translator is None:
-        return text
+    # Tokenizer input
+    inputs = tokenizer(text, return_tensors="pt", truncation=True, padding=True)
 
-    # Ajout d'une consigne pour le modèle
-    prompt = f"Traduire en dioula : {text}"
-    result = translator(prompt)
+    # Génération
+    forced_bos_token_id = tokenizer.convert_tokens_to_ids("dyu_Latn")
+    generated_tokens = model.generate(
+        **inputs,
+        forced_bos_token_id=forced_bos_token_id,
+        max_length=128
+    )
 
-    # Le pipeline renvoie une liste, on prend le premier élément
-    return result[0]["translation_text"]
+    # Décodage
+    result = tokenizer.batch_decode(generated_tokens, skip_special_tokens=True)
+    return result[0]
