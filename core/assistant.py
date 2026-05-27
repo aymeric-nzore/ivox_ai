@@ -1,6 +1,18 @@
 from memory.redis_memory import add_message, get_history
 from core.mistral_chat import chat
 from core.translator import translate
+import re
+
+
+def _extract_translation_phrase(text: str):
+    lowered = text.strip().lower()
+    match = re.search(r"\b(?:traduit|traduire|traduis)\b", lowered)
+    if not match:
+        return None
+
+    phrase = text[match.end():].strip()
+    phrase = re.sub(r"\s+en\s+dioula\s*$", "", phrase, flags=re.IGNORECASE).strip(" ,.;:!?\"")
+    return phrase
 
 
 def assistant_response(user_id, text):
@@ -13,9 +25,12 @@ def assistant_response(user_id, text):
         history = get_history(user_id)[-8:]
 
         # 3. Décider quoi faire
-        if text.lower().startswith("traduire"):
-            phrase = text.replace("traduire", "").strip()
-            response = translate(phrase)
+        phrase = _extract_translation_phrase(text)
+        if phrase is not None:
+            if not phrase:
+                response = "Donne-moi la phrase à traduire en dioula."
+            else:
+                response = translate(phrase)
         else:
             response = chat(history)
 

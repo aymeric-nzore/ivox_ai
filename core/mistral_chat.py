@@ -1,12 +1,6 @@
 import os
 import re
-try:
-    from mistralai import Mistral
-except ImportError:
-    try:
-        from mistralai.client import Mistral
-    except ImportError:
-        Mistral = None
+import importlib
 
 try:
     from dotenv import load_dotenv
@@ -16,7 +10,33 @@ except ImportError:
 
 load_dotenv()
 
+Mistral = None
+_client = None
+
+
+def _load_mistral_class():
+    global Mistral
+
+    if Mistral is not None:
+        return Mistral
+
+    try:
+        mistralai_module = importlib.import_module("mistralai")
+        mistral_class = getattr(mistralai_module, "Mistral", None)
+        if mistral_class is None:
+            mistralai_client_module = importlib.import_module("mistralai.client")
+            mistral_class = getattr(mistralai_client_module, "Mistral", None)
+    except ImportError:
+        mistral_class = None
+
+    Mistral = mistral_class
+    return Mistral
+
 def _build_client():
+    mistral_class = _load_mistral_class()
+    if mistral_class is None:
+        return None
+
     if Mistral is None:
         return None
 
@@ -24,12 +44,9 @@ def _build_client():
     if not api_key:
         return None
     try:
-        return Mistral(api_key=api_key)
+        return mistral_class(api_key=api_key)
     except Exception:
         return None
-
-
-client = _build_client()
 
 
 def _sanitize_reply(text):
@@ -58,6 +75,8 @@ def _sanitize_reply(text):
 
 def chat(messages):
     """Envoie toute la conversation à Mistral pour générer une réponse"""
+    global _client
+
     system_message = {
         "role": "system",
         "content": (
@@ -71,11 +90,14 @@ def chat(messages):
         ),
     }
 
-    if client is None:
+    if _client is None:
+        _client = _build_client()
+
+    if _client is None:
         return "Je suis Mylann. Je suis momentanement indisponible, reessaie dans quelques instants."
 
     try:
-        response = client.chat.complete(
+        response = _client.chat.complete(
             model="mistral-small-latest",
             messages=[system_message, *messages],
         )

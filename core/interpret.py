@@ -1,9 +1,41 @@
 import os
-from dotenv import load_dotenv
 import json
-from openai import OpenAI
+
+try:
+    from dotenv import load_dotenv
+except ImportError:
+    def load_dotenv(*args, **kwargs):
+        return False
+
 load_dotenv()
-client = OpenAI(api_key=os.getenv("OPEN_AI_API_KEY"))
+
+OpenAI = None
+_client = None
+
+
+def _load_openai_client():
+    global OpenAI, _client
+
+    if _client is not None:
+        return _client
+
+    if OpenAI is None:
+        try:
+            from openai import OpenAI as openai_class
+        except ImportError:
+            return None
+        OpenAI = openai_class
+
+    api_key = os.getenv("OPEN_AI_API_KEY")
+    if not api_key:
+        return None
+
+    try:
+        _client = OpenAI(api_key=api_key)
+    except Exception:
+        _client = None
+
+    return _client
 
 def interpret_command(text : str):
     """Transforme un texte utilisateur en action JSON exploitable par une application mobile"""
@@ -33,6 +65,10 @@ def interpret_command(text : str):
     Phrase : "{text}"
     """
     try:
+        client = _load_openai_client()
+        if client is None:
+            return basic_rules(text)
+
         #Appel à l'ia
         response = client.chat.completions.create(
             model="gpt-4o-mini",

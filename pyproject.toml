@@ -1,0 +1,19 @@
+[project]
+name = "ia-service"
+version = "0.1.0"
+description = "Backend IA d'IVOX"
+requires-python = ">=3.11"
+dependencies = [
+  "fastapi==0.135.2",
+  "uvicorn==0.42.0",
+  "python-dotenv==1.2.2",
+  "redis==7.4.0",
+  "transformers==5.4.0",
+  "torch==2.11.0",
+  "sentencepiece==0.2.1",
+  "openai==2.30.0",
+  "mistralai==2.1.3",
+]
+
+[tool.uv]
+package = false

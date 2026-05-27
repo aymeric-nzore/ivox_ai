@@ -1,7 +1,11 @@
-
-from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
 import os
-from dotenv import load_dotenv
+import importlib
+
+try:
+    from dotenv import load_dotenv
+except Exception:
+    def load_dotenv(*args, **kwargs):
+        return False
 
 load_dotenv()
 
@@ -9,10 +13,10 @@ _model = None
 _tokenizer = None
 
 HF_MODEL = "aymericnzo/ivox_fr-dioula"
-HF_TOKEN = os.getenv("HF_TOKEN")  # doit être défini dans l'environnement
 
-if not HF_TOKEN:
-    raise EnvironmentError("La variable d'environnement HF_TOKEN n'est pas définie. Ajoutez-la avant de lancer le script.")
+
+def _fallback_translation_message(text: str) -> str:
+    return f"Je peux traduire '{text}', mais le modèle Dioula n'est pas disponible pour le moment."
 
 def load_model():
     """Charge le modèle FR→Dioula depuis Hugging Face si ce n'est pas déjà fait."""
@@ -21,15 +25,26 @@ def load_model():
     if _model is not None:
         return _model, _tokenizer
 
+    hf_token = os.getenv("HF_TOKEN")
+    if not hf_token:
+        raise RuntimeError("HF_TOKEN manquant: impossible de charger le modèle de traduction.")
+
+    transformers_module = importlib.import_module("transformers")
+    AutoTokenizer = transformers_module.AutoTokenizer
+    AutoModelForSeq2SeqLM = transformers_module.AutoModelForSeq2SeqLM
+
     # Charger depuis Hugging Face avec token moderne
-    _tokenizer = AutoTokenizer.from_pretrained(HF_MODEL, token=HF_TOKEN)
-    _model = AutoModelForSeq2SeqLM.from_pretrained(HF_MODEL, token=HF_TOKEN)
+    _tokenizer = AutoTokenizer.from_pretrained(HF_MODEL, token=hf_token)
+    _model = AutoModelForSeq2SeqLM.from_pretrained(HF_MODEL, token=hf_token)
 
     return _model, _tokenizer
 
 def translate(text: str) -> str:
     """Traduit une phrase du français vers le dioula."""
-    model, tokenizer = load_model()
+    try:
+        model, tokenizer = load_model()
+    except Exception:
+        return _fallback_translation_message(text)
 
     # Tokenizer input
     inputs = tokenizer(text, return_tensors="pt", truncation=True, padding=True)
