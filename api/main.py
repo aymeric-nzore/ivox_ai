@@ -1,10 +1,8 @@
-from fastapi import FastAPI, APIRouter
+from fastapi import FastAPI
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 from core.assistant import assistant_response
 from core.interpret import interpret_command
-import requests
-import os
 
 app = FastAPI()
 
