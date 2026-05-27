@@ -41,6 +41,11 @@ def load_model():
 
 def translate(text: str) -> str:
     """Traduit une phrase du français vers le dioula."""
+    # Protection: ne chargez le modèle HF que si l'option est explicitement activée
+    # (évite les plantages natifs dus à torch/transformers sur des environnements limités).
+    if os.getenv("ENABLE_HF_MODEL", "0") != "1":
+        return _fallback_translation_message(text)
+
     try:
         model, tokenizer = load_model()
     except Exception:
